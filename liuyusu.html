@@ -71,10 +71,37 @@ nav {
   flex-shrink: 0;
   gap: 20px;
 }
+.overlay-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
 #overlay-title {
   font-family: var(--mono); font-size: 11px;
   letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--paper2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#overlay-back {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--paper);
+  cursor: pointer;
+  padding: 10px 18px;
+  border: 1px solid var(--blood);
+  background: var(--blood);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+#overlay-back:hover {
+  background: transparent;
+  color: var(--blood);
+  transform: translateX(-2px);
 }
 .overlay-actions {
   display: flex;
@@ -109,6 +136,31 @@ nav {
   flex: 1;
   width: 100%; border: none;
   background: #fff;
+}
+@media(max-width:620px){
+  #overlay-header {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  .overlay-left,
+  .overlay-actions {
+    width: 100%;
+  }
+  .overlay-left {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #overlay-back {
+    width: 100%;
+  }
+  #overlay-open,
+  #overlay-close {
+    flex: 1;
+    text-align: center;
+  }
 }
 
 /* ======= 英雄区 ======= */
@@ -712,7 +764,10 @@ footer {
 <!-- 全屏作品弹层 -->
 <div id="overlay">
   <div id="overlay-header">
-    <span id="overlay-title">作品预览</span>
+    <div class="overlay-left">
+      <button id="overlay-back" onclick="closeOverlay()">← 返回主界面</button>
+      <span id="overlay-title">作品预览</span>
+    </div>
     <div class="overlay-actions">
       <a id="overlay-open" href="#" target="_blank" rel="noopener">新窗口打开</a>
       <button id="overlay-close" onclick="closeOverlay()">✕ 关闭</button>
@@ -1076,18 +1131,8 @@ function resolveWorkUrl(url) {
   return new URL(url, window.location.href).href;
 }
 
-function isExternalWork(url) {
-  return /^https?:\/\//i.test(url);
-}
-
 function openWork(url, title) {
   const href = resolveWorkUrl(url);
-
-  if (isExternalWork(url)) {
-    const opened = window.open(href, '_blank', 'noopener');
-    if (!opened) window.location.href = href;
-    return;
-  }
 
   document.getElementById('overlay-title').textContent = title;
   document.getElementById('overlay-open').href = href;
