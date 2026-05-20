@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI 制作视频全流程 · 开源</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,400&family=JetBrains+Mono:wght@400;700&family=Noto+Serif+SC:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0a0a0a;
+  --ink-2:#141414;
+  --ink-3:#1f1f1f;
+  --paper:#f4f1ea;
+  --paper-2:#e8e4d8;
+  --bone:#cfc8b8;
+  --blood:#d63029;
+  --blood-deep:#8a1c19;
+  --gold:#b8915a;
+  --line:rgba(244,241,234,0.12);
+  --line-strong:rgba(244,241,234,0.28);
+  --serif:"Fraunces","Noto Serif SC","Songti SC",serif;
+  --sans:"Noto Sans SC","PingFang SC",-apple-system,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--ink);
+  color:var(--paper);
+  font-family:var(--sans);
+  font-weight:300;
+  line-height:1.7;
+  letter-spacing:0.01em;
+  overflow-x:hidden;
+  font-feature-settings:"palt";
+}
+::selection{background:var(--blood);color:var(--paper);}
+
+body::before{
+  content:"";
+  position:fixed;inset:0;
+  pointer-events:none;
+  z-index:9999;
+  opacity:0.04;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* === NAV === */
+.nav{
+  position:fixed;top:0;left:0;right:0;
+  z-index:100;
+  padding:20px 40px;
+  display:flex;justify-content:space-between;align-items:center;
+  mix-blend-mode:difference;
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:#fff;
+}
+.nav .brand{font-weight:700;}
+.nav .brand span{color:var(--blood);}
+.progress{
+  position:fixed;top:0;left:0;
+  height:2px;background:var(--blood);
+  width:0%;
+  z-index:101;
+  transition:width 0.1s;
+}
+
+/* === HERO === */
+.hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:120px 6vw 60px;
+  position:relative;
+  border-bottom:1px solid var(--line);
+}
+.hero .meta{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.25em;
+  text-transform:uppercase;
+  color:var(--bone);
+  margin-bottom:60px;
+  display:flex;gap:30px;
+  opacity:0;
+  animation:fadeIn 1.2s 0.2s forwards;
+}
+.hero .meta span:first-child{color:var(--blood);}
+.hero h1{
+  font-family:var(--serif);
+  font-weight:900;
+  font-size:clamp(56px,12vw,200px);
+  line-height:0.88;
+  letter-spacing:-0.04em;
+  margin-bottom:40px;
+}
+.hero h1 .word{
+  display:inline-block;
+  opacity:0;transform:translateY(60px);
+  animation:wordIn 1s forwards;
+}
+.hero h1 .word:nth-child(1){animation-delay:0.4s;}
+.hero h1 .word:nth-child(2){animation-delay:0.55s;color:var(--blood);font-style:italic;}
+.hero h1 .word:nth-child(3){animation-delay:0.7s;}
+@keyframes wordIn{to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{to{opacity:1;}}
+
+.hero .lede{
+  max-width:680px;
+  font-family:var(--serif);
+  font-weight:300;
+  font-size:clamp(18px,2vw,26px);
+  line-height:1.55;
+  color:var(--paper);
+  margin-top:40px;
+  opacity:0;
+  animation:fadeIn 1.2s 1.2s forwards;
+}
+.hero .lede em{font-style:italic;color:var(--blood);}
+
+.hero .scroll-hint{
+  position:absolute;
+  bottom:40px;left:6vw;
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.3em;
+  text-transform:uppercase;
+  color:var(--bone);
+  display:flex;align-items:center;gap:14px;
+  opacity:0;
+  animation:fadeIn 1.5s 2s forwards;
+}
+.hero .scroll-hint::before{
+  content:"";
+  width:60px;height:1px;
+  background:var(--bone);
+}
+.hero .ornament{
+  position:absolute;
+  top:50%;right:6vw;
+  transform:translateY(-50%);
+  font-family:var(--serif);
+  font-style:italic;
+  font-weight:300;
+  font-size:13px;
+  color:var(--bone);
+  writing-mode:vertical-rl;
+  letter-spacing:0.3em;
+  opacity:0;
+  animation:fadeIn 2s 1.5s forwards;
+}
+
+/* === SECTION FRAMEWORK === */
+section.chapter{
+  padding:160px 6vw;
+  position:relative;
+  border-bottom:1px solid var(--line);
+}
+.chapter-mark{
+  display:flex;align-items:baseline;gap:24px;
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.25em;
+  text-transform:uppercase;
+  color:var(--bone);
+  margin-bottom:30px;
+}
+.chapter-mark .num{
+  font-family:var(--serif);
+  font-weight:900;
+  font-size:90px;
+  color:var(--blood);
+  line-height:0.8;
+  letter-spacing:-0.03em;
+}
+.chapter-mark .label{
+  flex:1;
+  border-bottom:1px solid var(--line-strong);
+  padding-bottom:8px;
+}
+h2.chapter-title{
+  font-family:var(--serif);
+  font-weight:900;
+  font-size:clamp(40px,7vw,110px);
+  line-height:0.95;
+  letter-spacing:-0.03em;
+  margin-bottom:60px;
+  max-width:1200px;
+}
+h2.chapter-title em{font-style:italic;color:var(--blood);}
+.chapter-tagline{
+  font-family:var(--serif);
+  font-style:italic;
+  font-weight:300;
+  font-size:clamp(16px,1.7vw,21px);
+  color:var(--bone);
+  max-width:600px;
+  margin-bottom:80px;
+}
+
+/* === BLOCK SYSTEM === */
+.block{margin-bottom:120px;}
+.block-num{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.25em;
+  color:var(--blood);
+  margin-bottom:14px;
+}
+.block h3{
+  font-family:var(--serif);
+  font-weight:600;
+  font-size:clamp(26px,3vw,42px);
+  line-height:1.15;
+  letter-spacing:-0.01em;
+  margin-bottom:30px;
+  max-width:900px;
+}
+.block p{
+  font-family:var(--serif);
+  font-weight:300;
+  font-size:18px;
+  line-height:1.75;
+  margin-bottom:22px;
+  max-width:680px;
+  color:#e8e4d8;
+}
+.block p strong{
+  font-weight:700;
+  color:var(--paper);
+  background:linear-gradient(transparent 60%, rgba(214,48,41,0.25) 60%);
+  padding:0 2px;
+}
+.block p em{font-style:italic;color:var(--blood);}
+
+/* === PULL QUOTES === */
+.pullquote{
+  margin:80px auto;
+  max-width:1200px;
+  padding:60px 40px;
+  text-align:center;
+  position:relative;
+}
+.pullquote::before,.pullquote::after{
+  content:"";
+  position:absolute;
+  width:60px;height:1px;
+  background:var(--blood);
+  left:50%;transform:translateX(-50%);
+}
+.pullquote::before{top:0;}
+.pullquote::after{bottom:0;}
+.pullquote q{
+  font-family:var(--serif);
+  font-style:italic;
+  font-weight:400;
+  font-size:clamp(24px,4vw,52px);
+  line-height:1.25;
+  letter-spacing:-0.01em;
+  color:var(--paper);
+  display:block;
+  quotes:none;
+}
+.pullquote q::before,.pullquote q::after{content:none;}
+.pullquote.red q{color:var(--blood);}
+.pullquote .attr{
+  margin-top:30px;
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.3em;
+  text-transform:uppercase;
+  color:var(--bone);
+}
+
+/* === CASE BLOCKS === */
+.case{
+  margin:60px 0;
+  padding:40px 50px;
+  background:var(--ink-2);
+  border-left:3px solid var(--blood);
+  position:relative;
+}
+.case-tag{
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.3em;
+  text-transform:uppercase;
+  color:var(--blood);
+  margin-bottom:20px;
+}
+.case p{
+  font-family:var(--serif);
+  font-weight:300;
+  font-size:17px;
+  line-height:1.75;
+  color:var(--paper-2);
+  margin-bottom:16px;
+  max-width:none;
+}
+
+/* === STEPS / FLOW === */
+.steps{
+  margin:80px 0;
+  display:flex;
+  flex-direction:column;
+}
+.step-row{
+  display:grid;
+  grid-template-columns:80px 1fr;
+  gap:40px;
+  padding:40px 0;
+  border-bottom:1px solid var(--line);
+  align-items:baseline;
+  position:relative;
+  cursor:default;
+  transition:all 0.4s;
+}
+.step-row::before{
+  content:"";
+  position:absolute;
+  left:0;top:0;
+  height:100%;width:0;
+  background:linear-gradient(90deg,rgba(214,48,41,0.07),transparent);
+  transition:width 0.5s;
+}
+.step-row:hover::before{width:100%;}
+.step-row:hover{padding-left:16px;}
+.step-num{
+  font-family:var(--serif);
+  font-style:italic;
+  font-weight:900;
+  font-size:72px;
+  color:var(--blood);
+  line-height:0.85;
+}
+.step-body{}
+.step-title{
+  font-family:var(--serif);
+  font-weight:600;
+  font-size:28px;
+  color:var(--paper);
+  margin-bottom:10px;
+}
+.step-tool{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.2em;
+  color:var(--gold);
+  text-transform:uppercase;
+  margin-bottom:14px;
+}
+.step-desc{
+  font-family:var(--serif);
+  font-size:17px;
+  color:var(--bone);
+  line-height:1.65;
+}
+.step-desc strong{
+  color:var(--paper);
+  font-weight:600;
+}
+
+/* === CODE BLOCK (prompt) === */
+.prompt-block{
+  margin:60px 0;
+  background:var(--ink-2);
+  border:1px solid var(--line-strong);
+  position:relative;
+  overflow:hidden;
+}
+.prompt-block::before{
+  content:"";
+  position:absolute;
+  top:0;left:0;right:0;
+  height:2px;
+  background:linear-gradient(90deg,var(--blood),var(--gold),transparent);
+}
+.prompt-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 28px;
+  border-bottom:1px solid var(--line);
+}
+.prompt-label{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.25em;
+  text-transform:uppercase;
+  color:var(--blood);
+}
+.prompt-copy{
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--bone);
+  cursor:pointer;
+  border:1px solid var(--line-strong);
+  padding:4px 12px;
+  background:transparent;
+  color:var(--bone);
+  transition:all 0.2s;
+}
+.prompt-copy:hover{border-color:var(--blood);color:var(--blood);}
+.prompt-body{
+  padding:32px 28px;
+  font-family:var(--mono);
+  font-size:13.5px;
+  line-height:1.85;
+  color:var(--paper-2);
+  white-space:pre-wrap;
+  word-break:break-all;
+}
+.prompt-body .ph{
+  color:var(--blood);
+  font-style:italic;
+}
+.prompt-body .section-head{
+  color:var(--gold);
+  font-weight:700;
+}
+.prompt-body .comment{
+  color:var(--bone);
+  opacity:0.6;
+}
+
+/* === TIP TAG === */
+.tip{
+  display:inline-block;
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--gold);
+  border:1px solid rgba(184,145,90,0.4);
+  padding:4px 10px;
+  margin-bottom:30px;
+}
+
+/* === REVEAL === */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity 0.8s,transform 0.8s;}
+.reveal.in{opacity:1;transform:translateY(0);}
+
+/* === ENDING === */
+section.ending{
+  padding:160px 6vw;
+  background:var(--paper);
+  color:var(--ink);
+  border-bottom:none;
+}
+section.ending .kicker{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.3em;
+  text-transform:uppercase;
+  color:var(--blood);
+  margin-bottom:40px;
+}
+section.ending h2{
+  font-family:var(--serif);
+  font-weight:900;
+  font-size:clamp(40px,7vw,100px);
+  line-height:1;
+  letter-spacing:-0.03em;
+  color:var(--ink);
+  margin-bottom:80px;
+}
+section.ending h2 em{font-style:italic;color:var(--blood);}
+.remember{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:48px;
+  margin-top:80px;
+}
+.remember-item .num{
+  font-family:var(--serif);
+  font-weight:900;
+  font-size:60px;
+  color:var(--blood);
+  line-height:0.8;
+  margin-bottom:20px;
+}
+.remember-item h4{
+  font-family:var(--serif);
+  font-weight:600;
+  font-size:22px;
+  color:var(--ink);
+  margin-bottom:12px;
+}
+.remember-item p{
+  font-family:var(--serif);
+  font-size:16px;
+  color:#444;
+  line-height:1.7;
+}
+
+/* === FOOTER === */
+footer{
+  background:var(--ink-2);
+  padding:80px 6vw 60px;
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:60px;
+  border-top:1px solid var(--line);
+  font-family:var(--sans);
+}
+footer h5{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.25em;
+  text-transform:uppercase;
+  color:var(--blood);
+  margin-bottom:24px;
+}
+footer ul{list-style:none;}
+footer ul li{
+  font-size:14px;
+  color:var(--bone);
+  padding:6px 0;
+  border-bottom:1px solid var(--line);
+}
+.closing{
+  font-family:var(--serif);
+  font-size:16px;
+  color:var(--bone);
+  line-height:1.8;
+}
+.closing em{font-style:italic;color:var(--paper);}
+.stamp{
+  display:flex;flex-direction:column;gap:12px;
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--bone);
+}
+
+@media(max-width:900px){
+  footer{grid-template-columns:1fr 1fr;}
+  .step-row{grid-template-columns:60px 1fr;gap:24px;}
+}
+@media(max-width:600px){
+  footer{grid-template-columns:1fr;}
+  section.chapter{padding:100px 6vw;}
+  .hero{padding:100px 6vw 50px;}
+}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<nav class="nav">
+  <div class="brand">AI<span>·</span>VIDEO</div>
+  <div>开源 · 全流程</div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="meta">
+    <span>开源</span>
+    <span>AI 制作视频</span>
+    <span>全流程整理</span>
+  </div>
+  <h1>
+    <span class="word">其实</span><span class="word">非常</span><span class="word">简单！</span>
+  </h1>
+  <p class="lede">
+    从文案到音频到动效，<em>一条龙</em>搞定。<br>
+    工具：Claude skill + MiniMax + Codex。<br>
+    量大管饱，发群里，开源！
+  </p>
+  <div class="scroll-hint">向下滚动</div>
+  <div class="ornament">文案 · 音频 · 动效 · 合并</div>
+</section>
+
+<!-- ============ CHAPTER 1: 流程口述 ============ -->
+<section class="chapter">
+  <div class="chapter-mark">
+    <div class="num">01</div>
+    <div class="label">第一部分 / Chapter One</div>
+    <div>流程口述</div>
+  </div>
+  <h2 class="chapter-title">我用 AI 制作<br>视频的<em>全流程</em></h2>
+  <p class="chapter-tagline">原话记录，一个步骤都不删。</p>
+
+  <div class="block reveal">
+    <div class="block-num">§ 01 · 文案</div>
+    <h3>我是用了树林昨天给的 skill 生成文案，一下子给我生成的这个 20 段。</h3>
+    <p>因为我不确定风格，所以我把我大概想生成的内容，然后给 GPT 让他给我生成一段提示词，然后我再用 skill 去写——<strong>直接让他整了 20 段。</strong></p>
+  </div>
+
+  <div class="block reveal">
+    <div class="block-num">§ 02 · 音频</div>
+    <h3>然后昨天就用 MiniMax 这个网站 AI 生成了一段音频。</h3>
+    <p>音频生成完了之后——</p>
+  </div>
+
+  <div class="block reveal">
+    <div class="block-num">§ 03 · 动效</div>
+    <h3>再让 Codex 配，根据果粒姐之前做的 HTML 视频输入给他，把内容换成我的。</h3>
+    <p>然后让 Codex 依据我这个文本的内容<strong>调整一下整体风格</strong>。</p>
+    <p>如果有不满意的地方再让他调整，就比如说动效什么的，就是让他给整的<em>就是动态多一点</em>。</p>
+  </div>
+
+  <div class="block reveal">
+    <div class="block-num">§ 04 · 合并</div>
+    <h3>最后再让 Codex 把音频和 HTML 配合在一起就行了，这个基本上就是一句话的事儿。</h3>
+    <p>如果发现三轮对话解决不了，那就新开一个对话，<strong>让他把音频和文字内容对齐。</strong></p>
+  </div>
+
+  <div class="block reveal">
+    <p>我觉得当音频和 HTML 都有了之后，<strong>这个整合到一起的工作给扣 Codex 就好——量大管饱。</strong></p>
+  </div>
+</section>
+
+<!-- ============ CHAPTER 2: 分步流程 ============ -->
+<section class="chapter">
+  <div class="chapter-mark">
+    <div class="num">02</div>
+    <div class="label">第二部分 / Chapter Two</div>
+    <div>分步流程</div>
+  </div>
+  <h2 class="chapter-title">四步，<em>搞定</em></h2>
+  <p class="chapter-tagline">每一步的工具和关键操作。</p>
+
+  <div class="steps reveal">
+    <div class="step-row">
+      <div class="step-num">壹</div>
+      <div class="step-body">
+        <div class="step-tool">Tool · Claude Skill + GPT</div>
+        <div class="step-title">文案生成</div>
+        <div class="step-desc">
+          把大概想生成的内容告诉 GPT → 让他生成一段<strong>提示词</strong> → 把提示词喂给 Claude skill → 一键出 20 段文案。不确定风格？先批量出，再挑选调整。
+        </div>
+      </div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">贰</div>
+      <div class="step-body">
+        <div class="step-tool">Tool · MiniMax</div>
+        <div class="step-title">音频生成</div>
+        <div class="step-desc">
+          把选好的文案粘贴到 MiniMax → 生成音频 → 下载 .mp3，<strong>记好本地路径</strong>。
+        </div>
+      </div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">叁</div>
+      <div class="step-body">
+        <div class="step-tool">Tool · Codex + 参考 HTML</div>
+        <div class="step-title">HTML 动效制作</div>
+        <div class="step-desc">
+          把参考 HTML（果粒姐版本）+ 我的文案给 Codex → 替换内容 → 按文案情绪调整整体风格 → 不满意继续改动效 → <strong>让动态多一点，要抓眼球</strong>。
+        </div>
+      </div>
+    </div>
+    <div class="step-row">
+      <div class="step-num">肆</div>
+      <div class="step-body">
+        <div class="step-tool">Tool · Codex（一句话）</div>
+        <div class="step-title">音频 + HTML 合并</div>
+        <div class="step-desc">
+          给 Codex 一句话：「把这个 mp3 嵌入这个 HTML，音频动画同步」→ 自动嵌入 + 对齐字幕时间轴。<br><br>
+          <strong>搞不定？新开对话。</strong> 专门处理「音频与文字对齐」，把音频路径 + HTML + 文案重新喂给 AI。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHAPTER 3: Prompt A ============ -->
+<section class="chapter">
+  <div class="chapter-mark">
+    <div class="num">03</div>
+    <div class="label">第三部分 / Chapter Three</div>
+    <div>动效制作 Prompt</div>
+  </div>
+  <h2 class="chapter-title">给 Codex 的<br><em>完整提示词</em></h2>
+  <p class="chapter-tagline">直接复制，替换占位符，粘贴进去就能用。</p>
+
+  <div class="block reveal">
+    <div class="block-num">§ 05 · 你是一个短视频 HTML 动效制作助手</div>
+    <h3>最重要的一条：音频是唯一时间标准。</h3>
+    <p>不允许根据文字长度估算时间。必须先完整分析音频，按真实朗读节奏切分字幕和画面时间轴。</p>
+  </div>
+
+  <div class="reveal">
+    <div class="prompt-block">
+      <div class="prompt-header">
+        <div class="prompt-label">Prompt A · 动效制作</div>
+        <button class="prompt-copy" onclick="copyPrompt('promptA')">复制</button>
+      </div>
+      <div class="prompt-body" id="promptA">你是一个短视频 HTML 动效制作助手。请根据我提供的文案、音频、参考风格和 HTML 文件，完成一个 16:9 的可播放 HTML 动效页面。
+
+<span class="section-head">【输入】</span>
+1. 文案：我会提供完整文字稿。
+2. 音频：我会提供本地音频文件路径。
+3. HTML：我会提供需要修改或替换的 HTML 文件路径。
+4. 参考风格：如果我发截图或描述，请根据它调整视觉风格，但不要照抄，要保持统一、专业、适合短视频。
+
+<span class="section-head">【最重要原则】</span>
+1. 音频是唯一时间标准。
+2. 不允许根据文字长度估算时间。
+3. 必须先完整分析音频，按真实朗读节奏切分字幕和画面时间轴。
+4. 如果文案和音频有出入，以音频内容为准修正文案，但不要改写风格。
+5. 每一句字幕必须有 startTime 和 endTime，精确到 0.1 秒。
+6. 声音读到哪一句，字幕和画面就显示哪一句，不能提前，也不能滞后。
+7. 不能只让动画总时长等于音频总时长，必须逐句对齐。
+
+<span class="section-head">【字幕规则】</span>
+1. 只保留一套字幕，避免底部两行字幕重叠。
+2. 优先保留较小、清晰、跟音频同步的实时字幕。
+3. 字幕不能长时间死停，句子停留期间要有轻微呼吸、扫光、脉冲或其他动态。
+4. 字幕不能遮挡核心画面和控制条。
+5. 字幕出现、消失、切换都必须跟音频时间点一致。
+
+<span class="section-head">【画面规则】</span>
+1. 根据文案情绪设计画面风格，不要套模板。
+2. 画面要有动态感，不能只是文字一页页切换。
+3. 每个镜头都要有明确画面：人物、屏幕、数据、终端、图形、光效、粒子、扫描线、卡片、倒计时、结构图等。
+4. 动效要抓人眼球，但风格必须统一。
+5. 避免文字、标题、字幕、画面元素互相重叠。
+6. 首屏尤其要检查：标题、时间、终端框、字幕、进度条不能挤在一起。
+7. 如果有固定分镜，例如 s01、s02、s03，要重新分配每个 shot 的持续时间，使其跟音频节奏一致。
+
+<span class="section-head">【控制条规则】</span>
+1. 控制条不能占地太大。
+2. 底部只保留一条很轻的小进度线。
+3. 播放按钮、时间码可以保留，但要低调。
+4. 不要让控制条抢画面注意力。
+
+<span class="section-head">【音频规则】</span>
+1. 必须把音频嵌入 HTML 中。
+2. 播放 HTML 时，音频和动画必须同步开始。
+3. 拖动进度条时，字幕和画面要能跳到对应时间点。
+4. 音频结束后，画面可以停留在最后一个镜头。
+
+<span class="section-head">【技术要求】</span>
+1. 输出为单个 HTML 文件，包含 CSS、JS、音频。
+2. 使用现有 HTML 的结构时，尽量小范围修改；如果原结构不适合，可以整体重构。
+3. 保持 16:9 横屏短视频比例。
+4. 使用 GSAP 或原生 JS 动画均可。
+5. 不要引入不必要的网络请求、统计、外部依赖。
+6. 如果音频较大，可以用 base64 嵌入。
+7. 修改后要检查 JS 语法、音频是否嵌入、镜头数量、字幕时间轴和总时长。
+
+<span class="section-head">【验收标准】</span>
+完成后请告诉我：
+1. 修改了哪个 HTML 文件。
+2. 音频总时长是多少。
+3. 是否已嵌入音频。
+4. 字幕分段数量。
+5. 画面 shot 数量。
+6. 是否隐藏了重复字幕。
+7. 是否压缩了底部进度条。
+8. 是否做过语法检查。
+
+<span class="section-head">【输出要求】</span>
+先输出：
+- "句子 / 开始时间 / 结束时间 / 对应画面"的表格。
+
+然后执行修改：
+- 更新 HTML 中的字幕时间轴。
+- 更新画面 shot 时间轴。
+- 嵌入音频。
+- 修复重叠。
+- 增强动态效果。
+- 检查并说明结果。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHAPTER 4: Prompt B ============ -->
+<section class="chapter">
+  <div class="chapter-mark">
+    <div class="num">04</div>
+    <div class="label">第四部分 / Chapter Four</div>
+    <div>输入模板</div>
+  </div>
+  <h2 class="chapter-title">每次使用时<br>填入<em>这个模板</em></h2>
+  <p class="chapter-tagline">把四个占位符换成你自己的内容，直接扔给 Codex。</p>
+
+  <div class="reveal">
+    <div class="prompt-block">
+      <div class="prompt-header">
+        <div class="prompt-label">Prompt B · 输入模板（每次使用）</div>
+        <button class="prompt-copy" onclick="copyPrompt('promptB')">复制</button>
+      </div>
+      <div class="prompt-body" id="promptB"><span class="section-head">【文案】</span>
+<span class="ph">【粘贴文案】</span>
+
+<span class="section-head">【音频路径】</span>
+<span class="ph">【粘贴 mp3 路径】</span>
+
+<span class="section-head">【HTML 文件】</span>
+<span class="ph">【粘贴 html 路径】</span>
+
+<span class="section-head">【参考风格】</span>
+<span class="ph">【截图 / 描述 / 想要的情绪】</span></div>
+    </div>
+  </div>
+
+  <div class="block reveal" style="margin-top:80px;">
+    <div class="tip">使用说明</div>
+    <p>Prompt A 是<strong>系统指令</strong>，放在对话最前面，只需设置一次。</p>
+    <p>Prompt B 是<strong>每次的输入模板</strong>，把四个占位符替换成你的实际内容，每次制作新视频时用这个。</p>
+    <p>搞不定？<em>三轮对话解决不了就新开对话</em>，专门处理「音频与文字对齐」这一步。</p>
+  </div>
+</section>
+
+<!-- ============ ENDING ============ -->
+<section class="ending">
+  <div class="kicker">收尾 · 关键点，记住</div>
+  <h2>音频是<em>唯一</em>时间标准。</h2>
+
+  <div class="remember">
+    <div class="remember-item">
+      <div class="num">01</div>
+      <h4>文案批量生成</h4>
+      <p>GPT 出提示词，Claude skill 出 20 段。不确定风格先批量，再挑选。</p>
+    </div>
+    <div class="remember-item">
+      <div class="num">02</div>
+      <h4>音频先行</h4>
+      <p>MiniMax 生成，mp3 路径记好。一切时间轴以音频为准，不按文字长度估算。</p>
+    </div>
+    <div class="remember-item">
+      <div class="num">03</div>
+      <h4>动效要抓眼球</h4>
+      <p>给 Codex 参考 HTML + 文案，风格统一，动态多一点，首屏检查不能挤。</p>
+    </div>
+    <div class="remember-item">
+      <div class="num">04</div>
+      <h4>合并是一句话的事</h4>
+      <p>音频 + HTML 都有了，交给 Codex 一句话搞定。卡住就新开对话。</p>
+    </div>
+  </div>
+
+  <div style="margin-top:120px;padding-top:60px;border-top:2px solid rgba(10,10,10,0.15);max-width:900px;">
+    <div style="font-family:var(--mono);font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:var(--blood);margin-bottom:30px;">最后一句</div>
+    <p style="font-family:var(--serif);font-weight:300;font-size:clamp(22px,3.5vw,38px);line-height:1.35;color:var(--ink);font-style:italic;">
+      输出为单个 HTML 文件，包含 CSS、JS、音频。<strong style="color:var(--blood);font-style:normal;">直接发群，开源！</strong>
+    </p>
+    <p style="margin-top:40px;font-family:var(--serif);font-size:19px;color:#444;line-height:1.7;">
+      我觉得当音频和 HTML 都有了之后，<strong style="color:var(--ink);">这个整合到一起的工作给扣 Codex 就好——量大管饱。</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div>
+    <h5>关于这份整理</h5>
+    <p class="closing">
+      把一个 AI 视频制作流程<br>
+      提炼成一份<em>可直接复用</em>的文档。<br>
+      原话口语原样保留。<br>
+      <em>Prompt 直接复制可用。</em>
+    </p>
+  </div>
+  <div>
+    <h5>流程步骤</h5>
+    <ul>
+      <li>① 文案生成</li>
+      <li>② 音频生成</li>
+      <li>③ HTML 动效</li>
+      <li>④ 音频合并</li>
+    </ul>
+  </div>
+  <div>
+    <h5>工具清单</h5>
+    <ul>
+      <li>Claude Skill（短视频文案）</li>
+      <li>GPT（生成提示词）</li>
+      <li>MiniMax（AI 语音）</li>
+      <li>Codex（动效 + 合并）</li>
+    </ul>
+  </div>
+  <div class="stamp">
+    <span>开源 · AI Video</span>
+    <span style="cursor:pointer;" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ 回到顶部</span>
+  </div>
+</footer>
+
+<script>
+// Progress bar
+const progress = document.getElementById('progress');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  progress.style.width = (h.scrollTop / (h.scrollHeight - h.clientHeight) * 100) + '%';
+});
+
+// Reveal on scroll
+const reveals = document.querySelectorAll('.reveal');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); }
+  });
+}, { threshold: 0.08 });
+reveals.forEach(r => obs.observe(r));
+
+// Copy prompt
+function copyPrompt(id) {
+  const el = document.getElementById(id);
+  // Get text without HTML tags
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = el.closest('.prompt-block').querySelector('.prompt-copy');
+    const orig = btn.textContent;
+    btn.textContent = '已复制 ✓';
+    btn.style.color = 'var(--gold)';
+    btn.style.borderColor = 'var(--gold)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color=''; btn.style.borderColor=''; }, 2000);
+  });
+}
+</script>
+</body>
+</html>

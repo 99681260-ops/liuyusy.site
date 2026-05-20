@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>封装 — 价值翻译的艺术</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#070707;
+  --bg2:#101010;
+  --bg3:#181818;
+  --text:#e2dfd8;
+  --dim:#6b6760;
+  --dim2:#9a9690;
+  --gold:#c8a84b;
+  --gold-dim:#6e5b27;
+  --border:#1e1e1e;
+  --border2:#2a2a2a;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Georgia','STSong','Songti SC',serif;
+  line-height:1.8;
+  overflow-x:hidden;
+}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:999;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:18px 56px;
+  border-bottom:1px solid var(--border);
+  background:rgba(7,7,7,0.88);
+  backdrop-filter:blur(16px);
+}
+.nav-logo{font-family:monospace;font-size:12px;color:var(--gold);letter-spacing:.18em}
+.nav-links{display:flex;gap:36px;list-style:none}
+.nav-links a{
+  font-family:monospace;font-size:11px;color:var(--dim2);
+  text-decoration:none;letter-spacing:.1em;transition:color .2s
+}
+.nav-links a:hover{color:var(--text)}
+
+/* ── HERO ── */
+#hero{
+  min-height:100vh;display:flex;align-items:center;
+  padding:120px 56px 100px;position:relative;overflow:hidden;
+}
+#hero::after{
+  content:'';position:absolute;
+  top:-20%;left:-10%;width:600px;height:600px;
+  background:radial-gradient(circle,rgba(200,168,75,.07) 0%,transparent 65%);
+  pointer-events:none;
+}
+.hero-eyebrow{
+  font-family:monospace;font-size:11px;color:var(--gold);
+  letter-spacing:.22em;text-transform:uppercase;margin-bottom:36px;
+}
+.hero-h1{
+  font-size:clamp(44px,6.5vw,90px);
+  line-height:1.06;font-weight:normal;margin-bottom:36px;
+}
+.hero-h1 em{color:var(--gold);font-style:normal}
+.hero-sub{
+  font-size:17px;color:var(--dim2);max-width:520px;
+  line-height:1.8;margin-bottom:64px;
+}
+.hero-sub strong{color:var(--text);font-weight:normal}
+.scroll-cue{
+  font-family:monospace;font-size:11px;color:var(--dim);
+  letter-spacing:.15em;display:flex;align-items:center;gap:14px;
+}
+.scroll-cue::before{content:'';width:40px;height:1px;background:var(--dim)}
+
+/* ── SHARED ── */
+.sec{padding:110px 56px}
+.sec-wide{padding:80px 0}
+.wrap{max-width:780px;margin:0 auto}
+.wrap-wide{max-width:1080px;margin:0 auto;padding:0 56px}
+.eyebrow{
+  font-family:monospace;font-size:11px;color:var(--gold);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:20px;
+}
+.sec-h2{
+  font-size:clamp(30px,3.8vw,50px);
+  font-weight:normal;line-height:1.15;margin-bottom:28px;
+}
+.sec-body{
+  font-size:16px;color:var(--dim2);line-height:1.88;max-width:660px;
+}
+.sec-body strong{color:var(--text);font-weight:normal}
+.rule{height:1px;background:var(--border);margin:0 56px}
+
+/* ── LADDER ── */
+.ladder{
+  border:1px solid var(--border2);
+  border-radius:2px;overflow:hidden;
+  margin:56px 0 0;
+}
+.l-row{
+  display:grid;
+  grid-template-columns:160px 1fr 200px;
+  gap:24px;align-items:center;
+  padding:24px 32px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  transition:background .18s;
+  position:relative;
+}
+.l-row:last-child{border-bottom:none}
+.l-row:hover{background:var(--bg2)}
+.l-row.open{background:var(--bg3)}
+.l-who{
+  font-family:monospace;font-size:11px;
+  color:var(--dim);letter-spacing:.08em;
+}
+.l-what{font-size:17px;line-height:1.4}
+.l-price{
+  font-family:monospace;font-size:13px;
+  color:var(--gold);text-align:right;
+}
+.l-detail{
+  display:none;
+  grid-column:1/-1;
+  padding:20px 0 4px;
+  border-top:1px solid var(--border);
+  margin-top:4px;
+  font-size:14px;color:var(--dim2);line-height:1.75;
+}
+.l-detail strong{color:var(--text);font-weight:normal}
+.l-row.open .l-detail{display:block}
+.ladder-hint{
+  font-family:monospace;font-size:11px;
+  color:var(--dim);letter-spacing:.08em;
+  margin-top:12px;
+}
+
+/* ── 4 LAYERS ── */
+.layers{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:1px;background:var(--border2);
+  border:1px solid var(--border2);
+  margin:56px 0 0;
+}
+.layer{
+  background:var(--bg);padding:44px 40px;
+  position:relative;overflow:hidden;
+  transition:background .25s;
+}
+.layer:hover{background:var(--bg2)}
+.layer-n{
+  position:absolute;top:16px;right:20px;
+  font-size:80px;font-family:monospace;
+  color:var(--border2);line-height:1;
+  user-select:none;transition:color .25s;
+}
+.layer:hover .layer-n{color:var(--bg3)}
+.layer-tag{
+  font-family:monospace;font-size:11px;
+  color:var(--gold);letter-spacing:.14em;margin-bottom:18px;
+}
+.layer-h{font-size:26px;font-weight:normal;margin-bottom:16px}
+.layer-p{font-size:15px;color:var(--dim2);line-height:1.75}
+.callout{
+  margin-top:22px;padding:16px 20px;
+  background:var(--bg);border-left:2px solid var(--gold-dim);
+  font-size:14px;color:var(--dim2);line-height:1.65;
+  border-radius:0 2px 2px 0;
+}
+.callout strong{color:var(--text);font-weight:normal}
+
+/* ── CASES ── */
+.case{padding:68px 0;border-top:1px solid var(--border)}
+.case-head{
+  display:grid;grid-template-columns:1fr auto;
+  gap:32px;align-items:start;margin-bottom:36px;
+}
+.case-h{font-size:28px;font-weight:normal}
+.case-badge{
+  font-family:monospace;font-size:10px;
+  color:var(--dim);letter-spacing:.12em;
+  border:1px solid var(--border2);
+  padding:6px 12px;white-space:nowrap;margin-top:6px;
+}
+.case-p{font-size:16px;color:var(--dim2);line-height:1.88;max-width:700px}
+.case-p + .case-p{margin-top:18px}
+.insight{
+  margin:32px 0;padding:28px 32px;
+  border:1px solid var(--gold-dim);
+  background:rgba(200,168,75,.04);
+  font-size:16px;color:var(--text);line-height:1.75;
+}
+.insight-note{
+  display:block;margin-top:14px;
+  font-size:14px;color:var(--dim2);line-height:1.7;
+}
+
+/* ── TRAPS ── */
+.traps{
+  display:flex;flex-direction:column;
+  gap:1px;background:var(--border2);
+  border:1px solid var(--border2);
+  margin:56px 0 0;
+}
+.trap{
+  background:var(--bg);
+  display:grid;grid-template-columns:60px 1fr;
+  gap:28px;padding:40px 44px;
+}
+.trap-n{
+  font-family:monospace;font-size:12px;
+  color:var(--dim);letter-spacing:.1em;padding-top:5px;
+}
+.trap-h{font-size:22px;font-weight:normal;margin-bottom:14px}
+.trap-p{font-size:15px;color:var(--dim2);line-height:1.75}
+.trap-p strong{color:var(--text);font-weight:normal}
+
+/* ── COMPARISON ── */
+.compare{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:1px;background:var(--border2);
+  border:1px solid var(--border2);
+  margin:56px 0 0;
+}
+.comp{background:var(--bg);padding:40px 44px}
+.comp-label{
+  font-family:monospace;font-size:11px;
+  letter-spacing:.15em;margin-bottom:24px;
+}
+.comp.before .comp-label{color:var(--dim)}
+.comp.after .comp-label{color:var(--gold)}
+.comp-row{
+  padding:14px 0;border-bottom:1px solid var(--border);
+  font-size:15px;
+}
+.comp-row:last-child{border-bottom:none}
+.comp.before .comp-row{color:var(--dim2)}
+.comp.after .comp-row{color:var(--text)}
+
+/* ── FRAMEWORK ── */
+.steps{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:1px;background:var(--border2);
+  border:1px solid var(--border2);
+  margin:56px 0 0;
+}
+.step{
+  background:var(--bg);padding:40px 32px;
+  border-right:1px solid var(--border);
+  transition:background .2s;
+}
+.step:last-child{border-right:none}
+.step:hover{background:var(--bg2)}
+.step-n{
+  font-family:monospace;font-size:11px;
+  color:var(--gold);letter-spacing:.14em;margin-bottom:20px;
+}
+.step-h{font-size:22px;font-weight:normal;margin-bottom:16px}
+.step-p{font-size:14px;color:var(--dim2);line-height:1.72}
+.step-q{
+  margin-top:20px;font-size:13px;
+  color:var(--gold);line-height:1.6;
+  font-family:monospace;letter-spacing:.02em;
+}
+
+/* ── FOOTER ── */
+footer{
+  padding:90px 56px;border-top:1px solid var(--border);
+  text-align:center;
+}
+.footer-q{
+  font-size:22px;color:var(--dim2);
+  max-width:620px;margin:0 auto 32px;line-height:1.65;
+  font-style:italic;
+}
+.footer-mark{
+  font-family:monospace;font-size:11px;
+  color:var(--border2);letter-spacing:.12em;
+}
+
+/* ── FADE ── */
+.fi{opacity:0;transform:translateY(18px);transition:opacity .65s ease,transform .65s ease}
+.fi.vis{opacity:1;transform:none}
+.fi-d1{transition-delay:.08s}
+.fi-d2{transition-delay:.16s}
+.fi-d3{transition-delay:.24s}
+.fi-d4{transition-delay:.32s}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  nav{padding:16px 24px}
+  .nav-links{display:none}
+  #hero,.sec{padding:100px 24px 80px}
+  .sec{padding:80px 24px}
+  .rule{margin:0 24px}
+  .wrap-wide{padding:0 24px}
+  .layers{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr 1fr}
+  .step{border-right:none;border-bottom:1px solid var(--border)}
+  .step:last-child{border-bottom:none}
+  .compare{grid-template-columns:1fr}
+  .l-row{grid-template-columns:1fr auto}
+  .l-who{grid-column:1/-1;margin-bottom:-8px}
+  .case-head{grid-template-columns:1fr}
+  footer{padding:60px 24px}
+}
+@media(max-width:600px){
+  .steps{grid-template-columns:1fr}
+  .trap{grid-template-columns:40px 1fr;padding:32px 24px}
+  .comp{padding:32px 24px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">封装 · PACKAGING</span>
+  <ul class="nav-links">
+    <li><a href="#essence">本质</a></li>
+    <li><a href="#layers">四层</a></li>
+    <li><a href="#cases">案例</a></li>
+    <li><a href="#traps">陷阱</a></li>
+    <li><a href="#action">行动</a></li>
+  </ul>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero">
+  <div>
+    <div class="hero-eyebrow fi">价值翻译的艺术</div>
+    <h1 class="hero-h1 fi fi-d1">
+      同一块皮料，<br>
+      矿工按重量卖，<br>
+      爱马仕让你<em>排队三年</em><br>
+      才有资格买
+    </h1>
+    <p class="hero-sub fi fi-d2">
+      东西没变。变的是<strong>谁定义了它是什么</strong>。<br>
+      这种定义他人认知的能力，叫封装。<br>
+      它决定了你的价值最终被标上什么价格。
+    </p>
+    <div class="scroll-cue fi fi-d3">向下读</div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- ═══ ESSENCE ═══ -->
+<section id="essence" class="sec">
+  <div class="wrap">
+    <div class="eyebrow fi">01 — 封装的本质</div>
+    <h2 class="sec-h2 fi">它不是"包装得好看"，<br>是争夺解释权</h2>
+    <p class="sec-body fi">
+      大多数人以为封装是把东西弄得精致一点，写几句漂亮话，配个好看的图。<br><br>
+      这是表皮。<br><br>
+      <strong>封装真正做的事是：重新定义对方「在买什么」。</strong><br><br>
+      谁掌握了这个定义权，谁就掌握了定价权。同一件事，进入不同的解释系统，价格可以相差一百倍。
+      下面这张表格展示了最极端的一个例子——
+    </p>
+  </div>
+
+  <!-- Ladder -->
+  <div class="wrap-wide fi">
+    <div class="eyebrow" style="margin-top:60px">同一块皮料，走进不同解释系统的旅程</div>
+    <div class="ladder">
+      <div class="l-row" onclick="tog(this)">
+        <span class="l-who">原材料市场</span>
+        <span class="l-what">一张牛皮</span>
+        <span class="l-price">¥60–120 / 张</span>
+        <div class="l-detail">
+          按克重计价。买家是皮料商，关心厚度、延展性、疤痕数量。
+          没有故事，没有场景，没有任何关于"它意味着什么"的叙述。
+          这里交易的是纯粹的物理属性。
+        </div>
+      </div>
+      <div class="l-row" onclick="tog(this)">
+        <span class="l-who">无名工厂</span>
+        <span class="l-what">手工皮包（无品牌）</span>
+        <span class="l-price">¥200–600</span>
+        <div class="l-detail">
+          加入了工艺，从原料变成商品。但没有名字，没有故事。
+          买家在拼多多或淘宝搜「真皮手包」，比较的是价格和销量。
+          竞争维度是功能和性价比。这里卖的本质上是劳动力的时间成本。
+        </div>
+      </div>
+      <div class="l-row" onclick="tog(this)">
+        <span class="l-who">独立设计师</span>
+        <span class="l-what">有故事的设计师手袋</span>
+        <span class="l-price">¥1,800–8,000</span>
+        <div class="l-detail">
+          加入了审美立场和创作者身份。买这个包的人在买「我的品味」，
+          同时在支持一个具体的人和理念。溢价来自于独特性和圈层认同。
+          这里的定价逻辑是：你不只在买一个包，你在支持一种审美主张的存在。
+        </div>
+      </div>
+      <div class="l-row" onclick="tog(this)">
+        <span class="l-who">奢侈品品牌</span>
+        <span class="l-what">LV / Gucci 经典款</span>
+        <span class="l-price">¥8,000–50,000</span>
+        <div class="l-detail">
+          加入了历史积累、全球身份符号和阶层标志。
+          买家不是在买「能装东西的包」，而是在买一个可被全球识别的社会信号：
+          「我属于这个消费层级。」包的功能几乎不重要，重要的是它的外显性。
+          这里的定价逻辑是：你在买一张阶层入场券。
+        </div>
+      </div>
+      <div class="l-row" onclick="tog(this)">
+        <span class="l-who">爱马仕</span>
+        <span class="l-what">铂金包 Birkin</span>
+        <span class="l-price">¥200,000+（且需排队资格）</span>
+        <div class="l-detail">
+          <strong>爱马仕最狠的地方不是价格，是你没有资格直接买。</strong><br><br>
+          你必须先在门店积累足够的消费记录，才有资格被「允许购买」铂金包。
+          这意味着产品本身已经退场——爱马仕真正在出售的，是一种经过筛选和验证之后才能获得的权力感。<br><br>
+          买家付出的不只是钱，而是时间、资质，以及「被这个系统承认」的身份。
+          这是封装的终极形态：<strong>稀缺性本身变成了商品，而不只是商品的属性。</strong>
+        </div>
+      </div>
+    </div>
+    <p class="ladder-hint">↑ 点击展开每一层</p>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- ═══ LAYERS ═══ -->
+<section id="layers" class="sec">
+  <div class="wrap">
+    <div class="eyebrow fi">02 — 四层能力</div>
+    <h2 class="sec-h2 fi">封装不是一个动作，<br>是四层能力叠加</h2>
+    <p class="sec-body fi">
+      掌握一层，你能卖出产品。掌握两层，你能建立品牌。掌握三层，你能定义市场。
+      掌握四层，你能<strong>改写别人理解某件事物的底层语言</strong>。
+    </p>
+  </div>
+  <div class="wrap-wide fi">
+    <div class="layers">
+
+      <div class="layer">
+        <span class="layer-n">01</span>
+        <div class="layer-tag">FILTERING · 筛选</div>
+        <h3 class="layer-h">什么值得被看见</h3>
+        <p class="layer-p">
+          封装的第一刀是「删什么」，而不是「加什么」。
+          米其林厨师与快餐厨师的根本差异，不是前者用了更多食材，
+          而是前者删掉了更多东西，让每一个留下的元素都有充分理由存在。
+          <br><br>
+          低质量的封装往往堆砌信息，高质量的封装往往令人感到「刚好」。
+          「刚好」是大量删除之后的结果。
+        </p>
+        <div class="callout">
+          <strong>苹果鼠标：</strong>
+          Jony Ive 团队把鼠标上的按键从几十个砍到一个。
+          不是因为其他按键没用，而是「多余的选项本身就是一种噪音」。
+          筛选的能力，就是用删除来制造清晰感。
+        </div>
+      </div>
+
+      <div class="layer">
+        <span class="layer-n">02</span>
+        <div class="layer-tag">NAMING · 命名</div>
+        <h3 class="layer-h">把它放进更高的语境</h3>
+        <p class="layer-p">
+          名字决定了你的竞争对手是谁，也决定了买家拿你和什么比较。
+          「翻新球鞋」和「限量复古配色」是同一双鞋，但进入了完全不同的欲望系统和定价逻辑。
+          <br><br>
+          命名不是贴标签，是主动选择进入哪个价格体系。
+        </p>
+        <div class="callout">
+          <strong>Virgil Abloh × Nike「The Ten」：</strong>
+          他在 Nike Air Force 1 的鞋带孔旁边用双引号标注了「SHOELACES」——
+          把一双市价 ¥1,000 的球鞋变成了「关于球鞋本身的概念艺术品」。
+          改变的不是鞋，是「它应该被放在哪个货架上」这件事。
+          上市后二级市场价：¥18,000–30,000。
+        </div>
+      </div>
+
+      <div class="layer">
+        <span class="layer-n">03</span>
+        <div class="layer-tag">NARRATIVE · 叙事</div>
+        <h3 class="layer-h">让对方感受到"这和我有关"</h3>
+        <p class="layer-p">
+          叙事解决的核心问题只有一个：「这和我有什么关系？」
+          物理属性的描述回答不了这个问题，只有故事能。
+          <br><br>
+          人买的不是功能，买的是「拥有它之后，我会成为什么样的人」。
+          真正打动人的叙事，主角永远是对方，不是你。
+        </p>
+        <div class="callout">
+          <strong>星巴克「第三空间」：</strong>
+          星巴克的叙事不是「我们的咖啡豆来自埃塞俄比亚」，
+          而是「家和公司之外，属于你的第三个地方」。
+          这个叙事把一杯成本 ¥8 的饮品，变成了城市生活方式和中产身份的入场费。
+          你付的不是咖啡的钱，你付的是「我是这种生活方式的人」的确认费。
+        </div>
+      </div>
+
+      <div class="layer">
+        <span class="layer-n">04</span>
+        <div class="layer-tag">COMPRESSION · 压缩</div>
+        <h3 class="layer-h">把复杂价值装进一个符号</h3>
+        <p class="layer-p">
+          封装的最终形态，是把前三层积累的所有价值——
+          审美、身份、故事、稀缺——压缩进一个可以「一眼读懂」的符号。
+          压缩度越高，识别效率越高，社交货币价值越大。
+        </p>
+        <div class="callout">
+          <strong>爱马仕的橙色盒子：</strong>
+          这个盒子里压缩着：百年工匠传统、欧洲贵族遗产、极度稀缺的购买资格、
+          当代财富信号，以及「被这个系统筛选过」的身份证明。
+          你拿着它走在街上，不需要说一个字，
+          对方已经接收到了所有信息。这就是压缩完成的标志。
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- ═══ CASES ═══ -->
+<section id="cases" class="sec">
+  <div class="wrap">
+    <div class="eyebrow fi">03 — 大师怎么做</div>
+    <h2 class="sec-h2 fi">
+      那些改写了「某件事值多少钱」<br>的人，究竟动了什么？
+    </h2>
+  </div>
+
+  <div class="wrap-wide">
+
+    <!-- Case 1 -->
+    <div class="case fi">
+      <div class="case-head">
+        <h3 class="case-h">乔布斯：他从不描述产品，他描述你会过什么样的生活</h3>
+        <span class="case-badge">APPLE iPod · 2001</span>
+      </div>
+      <p class="case-p">
+        2001年，MP3播放器市场已经存在几年了，有几十个竞争对手，大家都在比拼参数。
+        所有人的发布逻辑是一样的：「我们的播放器有多少 GB 存储空间，支持什么格式，续航多少小时。」
+      </p>
+      <p class="case-p">
+        这些都是工程师语言，是在「原材料市场」用原材料语言出售原材料。
+      </p>
+      <div class="insight">
+        乔布斯发布 iPod 时只说了一句话：<br>
+        <br>
+        「把一千首歌装进口袋。」
+        <em class="insight-note">
+          5GB 是技术参数，「一千首歌装进口袋」是一个生活场景。
+          前者让你想到一块硬盘，后者让你想到坐地铁时无缝切歌，想到跑步时的那种自由，
+          想到「这个设备会陪着我的生活」。<br><br>
+          叙事层的封装不描述产品，描述使用它之后你是谁。
+          这个区别，值一千美元的市场溢价。
+        </em>
+      </div>
+      <p class="case-p">
+        更深的封装在发布会的现场：乔布斯穿着黑色高领毛衣，从牛仔裤口袋里掏出 iPod。
+        这个动作排练了无数次，不是偶然的优雅——它在视觉上证明了「一千首歌装进口袋」这句话。
+        叙事和现场体验被设计成同一个意思的两种表达，互相压缩，互相强化。
+        这是压缩层的封装。
+      </p>
+    </div>
+
+    <!-- Case 2 -->
+    <div class="case fi">
+      <div class="case-head">
+        <h3 class="case-h">村上隆：把漫画放进美术馆，解释权就变了</h3>
+        <span class="case-badge">命名权的重组</span>
+      </div>
+      <p class="case-p">
+        在村上隆之前，日本 manga 和 anime 在西方艺术圈的地位很清楚：大众娱乐，次文化，不可能进美术馆。
+        这不是因为这些作品没有视觉价值，而是因为它们被放在了「娱乐产品」这个解释系统里，
+        被拿去和其他娱乐产品比较，用娱乐产品的逻辑定价。
+      </p>
+      <div class="insight">
+        村上隆做了一件关键的事：他创造了一个理论框架，叫「超扁平」（Superflat）。
+        <em class="insight-note">
+          他声称：日本的二维视觉传统，是对西方透视霸权的一种解构，是后现代主义的东方表达。<br><br>
+          这个命名，把日本漫画从「娱乐产业」的货架，移到了「当代艺术史」的货架。
+          货架变了，比较对象就变了；比较对象变了，定价逻辑就全部重来。<br><br>
+          他的作品随后进入苏富比拍卖，与毕加索、杰夫·昆斯同场竞价。
+          他和 LV 合作的手袋系列，让路易威登的箱包进入了当代艺术收藏语境。
+        </em>
+      </div>
+      <p class="case-p">
+        封装的本质在这里最清晰：<strong>村上隆没有改变画面，他改变了解释这张画所用的语言体系。</strong>
+        语言体系决定了买家是谁，买家决定了价格区间，价格区间决定了它在社会上的位置。
+        一个理论框架，完成了从「流行文化商品」到「当代艺术资产」的跃迁。
+      </p>
+    </div>
+
+    <!-- Case 3 -->
+    <div class="case fi">
+      <div class="case-head">
+        <h3 class="case-h">凡·高：有最好的矿，但没有完成封装</h3>
+        <span class="case-badge">封装缺失的代价</span>
+      </div>
+      <p class="case-p">
+        凡·高一生只卖出了一幅画，在贫困和病痛中去世，年仅37岁。
+        今天，他的《鸢尾花》以1.5亿美元成交，《星夜》是人类文明史上最被复制的图像之一。
+      </p>
+      <p class="case-p">
+        画没有变。笔触没有变。颜料没有变。
+      </p>
+      <div class="insight">
+        变的是解释系统。
+        <em class="insight-note">
+          他活着的时候，没有任何人帮他把「一个有精神疾病的荷兰穷画家的作品」
+          封装成「印象派运动的先驱、情感真实性的革命者、人类苦难与热情的永恒象征」。<br><br>
+          这个叙事是他死后，由评论家、策展人、美术馆、拍卖行在几十年里共同建立的。
+          他们做了凡·高自己没能完成的封装工作。<br><br>
+          矿一直在。封装者来了之后，价格才爆发。
+        </em>
+      </div>
+      <p class="case-p">
+        这个案例的残忍之处在于：封装能力的缺失是有真实代价的。
+        不是「卖便宜了一点」，而是在贫困中离开，而你的价值要等别人来替你发现。
+        <br><br>
+        <strong>你无法控制你的天赋，但你可以控制你的封装。这是两件不同的事。</strong>
+      </p>
+    </div>
+
+    <!-- Case 4 -->
+    <div class="case fi">
+      <div class="case-head">
+        <h3 class="case-h">一个大一学生，用 AI 八小时做了一个小程序</h3>
+        <span class="case-badge">封装的当代版本</span>
+      </div>
+      <p class="case-p">
+        技术本身不稀缺。八小时、AI、小程序——这些词放在一起，
+        对大多数人来说就是「一个会用工具的年轻人做了个东西」。
+        这是原材料语言。
+      </p>
+      <div class="insight">
+        封装后的叙事是：<br>
+        <br>
+        「一个大一学生，用 AI 八小时完成基本开发，第一天上线破万，
+        现在 4 万用户，同期 IP 账号 3000 粉丝。
+        第一场大会第一天拿到 MCN 合作，
+        第二场大会主办方现场开口问他想去什么岗位，
+        第三场带团队拿了抖音 AI 创变者黑客松北京场二等奖。」
+        <em class="insight-note">
+          相同的事实，不同的组织方式。<br><br>
+          前者是碎矿：会用工具、做了个东西。<br>
+          后者是项链：一套完整的「从想法到上线到获得机会」的闭环验证，
+          被三个不同的社会场合独立确认过，并附有具体数据。<br><br>
+          封装之后，它不再是「技术能力的展示」，
+          而是「一条普通人在 AI 时代可以复制的路径的活样本」。
+          这两件事的受众完全不同，定价逻辑完全不同。
+        </em>
+      </div>
+      <p class="case-p">
+        封装不需要发生在爱马仕或苹果那个量级。
+        它每天都在发生在每一个人身上——只是大多数人没有意识到自己在做，或者没意识到自己没做好。
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- ═══ TRAPS ═══ -->
+<section id="traps" class="sec">
+  <div class="wrap">
+    <div class="eyebrow fi">04 — 三个陷阱</div>
+    <h2 class="sec-h2 fi">封装失败，通常是这三种原因</h2>
+    <p class="sec-body fi">
+      理解失败案例，比研究成功案例更有价值。失败暴露机制，成功只展示结果。
+    </p>
+  </div>
+  <div class="wrap-wide fi">
+    <div class="traps">
+      <div class="trap">
+        <span class="trap-n">01</span>
+        <div>
+          <h3 class="trap-h">只有包装，没有矿</h3>
+          <p class="trap-p">
+            把空洞的东西包装得很精美。短期能卖出去——因为封装制造了期待；
+            但交付之后，期待落空，信任崩塌，而且崩得比从不封装还惨，因为落差越大，背叛感越强。
+            <br><br>
+            <strong>判断标准：</strong>你的封装在描述一个还不存在的结果，还是在让一个已经存在的价值被看见？
+            前者是欺骗，后者是封装。两者的区别，在于底层是否有真实交付。
+            <br><br>
+            真正厉害的封装，不是把垃圾包装成宝石，而是把分散、粗糙、未被识别的价值，
+            重新组织成一个可感知、可传播、可交易的系统。
+          </p>
+        </div>
+      </div>
+      <div class="trap">
+        <span class="trap-n">02</span>
+        <div>
+          <h3 class="trap-h">叫错了名字，锁死在错误的价格体系里</h3>
+          <p class="trap-p">
+            名字决定你的竞争对手是谁。
+            <br><br>
+            说「我教编程」，你的竞争对手是 B 站免费课、掘金专栏、GitHub 文档，全部免费。
+            说「带你完成第一个 AI 作品闭环」，你的竞争对手几乎不存在。
+            <br><br>
+            说「帮你做个小程序」，买家脑子里自动出现的参照系是淘宝外包、大学生接单、几百块。
+            说「把立项项目变成可展示、可答辩、可结项的完整成果资产」，价格锚点立刻移位。
+            <br><br>
+            <strong>大量有真实价值的人，因为命名不准确，把自己锁死在低价竞争里。
+            他们用原材料市场的语言，在原材料市场被定价。</strong>
+          </p>
+        </div>
+      </div>
+      <div class="trap">
+        <span class="trap-n">03</span>
+        <div>
+          <h3 class="trap-h">叙事断裂：打动了人，但没给行动的出口</h3>
+          <p class="trap-p">
+            发了一条 10 万播放量的视频，评论里全是「好厉害」「太牛了」。
+            但私信加你的寥寥无几，转化接近于零。
+            <br><br>
+            这是叙事完成了，但封装没有闭合。
+            <br><br>
+            「打动人」解决的是情绪问题。「转化」解决的是行动问题。
+            情绪不会自动变成行动——两者之间需要一个清晰的接口：
+            <strong>下一步是什么？我该做什么？</strong>
+            这个接口如果不存在，所有被激活的欲望都会在几秒内蒸发。
+            <br><br>
+            「感兴趣就关注我」是没有出口的。
+            「评论『作品』，我发你选题表，我会从里面选10个人做首期共创」是有出口的。
+            出口越具体，摩擦越小，行动发生的概率越高。
+            封装的最后一刀，是给欲望一个可以走出去的门。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- ═══ COMPARE ═══ -->
+<section class="sec">
+  <div class="wrap">
+    <div class="eyebrow fi">对照</div>
+    <h2 class="sec-h2 fi">封装前后：同一件事的两种面貌</h2>
+    <p class="sec-body fi">
+      下面每一行都是同一件事实，只是用了不同的语言体系来表述。
+      语言体系不同，买家是谁就不同，定价逻辑就完全不同。
+    </p>
+  </div>
+  <div class="wrap-wide fi">
+    <div class="compare">
+      <div class="comp before">
+        <div class="comp-label">封装前 · 原材料语言</div>
+        <div class="comp-row">我会用 AI 做小程序</div>
+        <div class="comp-row">5GB 存储空间</div>
+        <div class="comp-row">有精神疾病的荷兰穷画家的画</div>
+        <div class="comp-row">皮质手袋，手工缝制</div>
+        <div class="comp-row">帮你做一个程序（大创项目）</div>
+        <div class="comp-row">漫画风格的波点和花朵图案</div>
+      </div>
+      <div class="comp after">
+        <div class="comp-label">封装后 · 价值翻译语言</div>
+        <div class="comp-row">带你完成第一个 AI 作品的完整闭环</div>
+        <div class="comp-row">把一千首歌装进口袋</div>
+        <div class="comp-row">印象派先驱，情感表达的革命者，人类苦难与热情的永恒象征</div>
+        <div class="comp-row">被筛选后才有资格拥有的权力符号，需排队三年</div>
+        <div class="comp-row">把立项项目做成可答辩、可结项、可继续申请资源的完整成果资产</div>
+        <div class="comp-row">对西方透视霸权的解构，后现代主义的东方表达</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- ═══ FRAMEWORK ═══ -->
+<section id="action" class="sec">
+  <div class="wrap">
+    <div class="eyebrow fi">05 — 行动框架</div>
+    <h2 class="sec-h2 fi">如何对自己的价值<br>完成一次封装</h2>
+    <p class="sec-body fi">
+      这不是理论框架，是一个检查清单。每一步都有一个问题。
+      如果你回答不上来，说明那一层还没做完。
+    </p>
+  </div>
+  <div class="wrap-wide fi">
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">STEP 01</div>
+        <h3 class="step-h">找矿</h3>
+        <p class="step-p">
+          你有什么别人感知不到的真实价值？不是「我会什么」，
+          而是「我有什么别人无法轻松复制的结果、经历、连接或眼界？」
+          <br><br>
+          矿可以是数据（第一天破万），可以是经历（三场大会三次被认可），
+          可以是身份反差（大一学生），可以是资源（已有的人脉和信任）。
+        </p>
+        <p class="step-q">→ 你能说出一个无法被轻易复制的具体案例吗？</p>
+      </div>
+      <div class="step">
+        <div class="step-n">STEP 02</div>
+        <h3 class="step-h">命名</h3>
+        <p class="step-p">
+          把它放进更高价值的语境里。不要用原材料市场的语言。
+          你的命名决定了你和谁竞争、被拿去和什么比较，以及买家愿意付什么价格。
+          <br><br>
+          好的命名让对方一听就知道「这不是那个」，
+          同时又能立刻感受到「但我可能需要这个」。
+        </p>
+        <p class="step-q">→ 你的命名让你和谁竞争？这是你想要的竞争对手吗？</p>
+      </div>
+      <div class="step">
+        <div class="step-n">STEP 03</div>
+        <h3 class="step-h">叙事</h3>
+        <p class="step-p">
+          用对方的语言，描述对方的问题，然后说明你的矿怎么解决它。
+          <br><br>
+          不要描述你有多厉害，要描述「你现在是什么处境，
+          有了这个之后你会变成什么」。
+          叙事里的主角，永远是对方，不是你。
+        </p>
+        <p class="step-q">→ 你的叙事里，主角是你还是对方？</p>
+      </div>
+      <div class="step">
+        <div class="step-n">STEP 04</div>
+        <h3 class="step-h">给出口</h3>
+        <p class="step-p">
+          欲望需要一个可以行动的接口，否则它会在几秒内蒸发。
+          出口越具体，摩擦越小，行动发生的概率越高。
+          <br><br>
+          「感兴趣的关注我」没有出口。「评论『作品』我发你选题表，
+          从里面选10人做首期」有出口，而且完成了第一轮筛选仪式。
+        </p>
+        <p class="step-q">→ 看完你的内容，对方下一步该做什么？这个步骤足够清晰吗？</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <p class="footer-q fi">
+    「把物变成符号，把符号变成身份，把身份变成交易，把交易变成持续的信仰。」
+  </p>
+  <p class="footer-mark fi" style="margin-top:16px;color:var(--dim);letter-spacing:.12em;font-family:monospace;font-size:11px;">
+    封装 · 价值翻译的艺术
+  </p>
+</footer>
+
+<script>
+// Intersection observer for fade-in
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('vis') })
+}, { threshold: 0.1, rootMargin: '0px 0px -32px 0px' })
+document.querySelectorAll('.fi').forEach(el => io.observe(el))
+
+// Hero stagger
+document.querySelectorAll('#hero .fi').forEach((el, i) => {
+  el.style.transitionDelay = i * 0.14 + 's'
+  setTimeout(() => el.classList.add('vis'), 80 + i * 140)
+})
+
+// Ladder toggle
+function tog(row) {
+  const open = row.classList.contains('open')
+  document.querySelectorAll('.l-row').forEach(r => r.classList.remove('open'))
+  if (!open) row.classList.add('open')
+}
+</script>
+</body>
+</html>
